@@ -49,10 +49,16 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.StepsRecord
 import com.example.assignment2.ui.theme.Assignment2Theme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -62,6 +68,41 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // FUNCTIONALITY TO GIVE PERMISSIONS FROM THE APP
+        val healthConnectClient = HealthConnectClient.getOrCreate(this)
+
+        val PERMISSIONS =
+            setOf(
+                HealthPermission.getReadPermission(HeartRateRecord::class),
+                HealthPermission.getWritePermission(HeartRateRecord::class),
+                HealthPermission.getReadPermission(StepsRecord::class),
+                HealthPermission.getWritePermission(StepsRecord::class)
+            )
+
+        // Create the permissions launcher
+        val requestPermissionActivityContract = PermissionController.createRequestPermissionResultContract()
+
+        val requestPermissions = registerForActivityResult(requestPermissionActivityContract) { granted ->
+            if (granted.containsAll(PERMISSIONS)) {
+                // Permissions successfully granted
+            } else {
+                // Lack of required permissions
+                runBlocking {
+                    launch(Dispatchers.IO) {
+                        val granted = healthConnectClient.permissionController.getGrantedPermissions()
+                        if (granted.containsAll(PERMISSIONS)) {
+                            // Permissions already granted; proceed with inserting or reading data
+                        } else {
+
+                        }
+                    }
+                }
+            }
+        }
+
+        requestPermissions.launch(PERMISSIONS)
+
         setContent {
             Assignment2Theme {
                 // A surface container using the 'background' color from the theme
@@ -79,13 +120,14 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HealthConnect(modifier: Modifier = Modifier) {
-
     val context = LocalContext.current
 
     val heartRate = remember {
         mutableStateOf(TextFieldValue(""))
     }
     val selectedDateTime = remember { mutableStateOf(Calendar.getInstance()) }
+
+    // DUMMY DATA
     val heartRateHistory = remember { mutableStateOf(
         List(18) { Pair("130bpm", "2024-01-12 18:00") }
     ) }
@@ -119,7 +161,6 @@ fun HealthConnect(modifier: Modifier = Modifier) {
                 onDateTimeSelected = { selectedDateTime.value = it }
             )
             Spacer(modifier = Modifier.height(20.dp))
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -127,7 +168,7 @@ fun HealthConnect(modifier: Modifier = Modifier) {
             ) {
                 Button(
                     onClick = {
-
+                        // SAVING FUNCTIONALITY HERE
                     },
                     modifier = Modifier.weight(1f),
                 ) {
@@ -140,7 +181,7 @@ fun HealthConnect(modifier: Modifier = Modifier) {
 
                 Button(
                     onClick = {
-
+                        // LOADING FUNCTIONALITY HERE
                     },
                     modifier = Modifier.weight(1f),
                     enabled = true
@@ -156,6 +197,7 @@ fun HealthConnect(modifier: Modifier = Modifier) {
 
         }
 
+        // HEARTRATE HISTORY SECTION
         Text(
             text = "Heart Rate History"
         )
@@ -194,6 +236,7 @@ private fun HeartRateRow(heartRate: String, dateTime: String) {
     }
 }
 
+// DATETIME PICKER FUNCTIONALITY
 @Composable
 private fun DateTimePicker(selectedDateTime: Calendar, onDateTimeSelected: (Calendar) -> Unit) {
     val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
