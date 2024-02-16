@@ -9,7 +9,9 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -81,10 +85,11 @@ fun HealthConnect(modifier: Modifier = Modifier) {
     val heartRate = remember {
         mutableStateOf(TextFieldValue(""))
     }
-    val dateAndTime = remember {
-        mutableStateOf(TextFieldValue(""))
-    }
     val selectedDateTime = remember { mutableStateOf(Calendar.getInstance()) }
+    val heartRateHistory = remember { mutableStateOf(
+        List(18) { Pair("130bpm", "2024-01-12 18:00") }
+    ) }
+
 
     // Main Interface
     Column(
@@ -104,11 +109,11 @@ fun HealthConnect(modifier: Modifier = Modifier) {
                     if (it.text.matches(Regex("\\d*")) && it.text.toIntOrNull() in 1..300) {
                         heartRate.value = it
                     } },
-                label = { Text("Heartrate (1-300bpm)") },
+                label = { Text("HeartRate (1-300bpm)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(15.dp))
             DateTimePicker(
                 selectedDateTime = selectedDateTime.value,
                 onDateTimeSelected = { selectedDateTime.value = it }
@@ -151,8 +156,41 @@ fun HealthConnect(modifier: Modifier = Modifier) {
 
         }
 
+        Text(
+            text = "Heart Rate History"
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 8.dp) // Optional: Add padding to the content
+            ) {
+                items(heartRateHistory.value) { heartRateItem ->
+                    HeartRateRow(heartRate = heartRateItem.first, dateTime = heartRateItem.second)
+                }
+            }
+        }
+
         AboutSection()
 
+    }
+}
+
+@Composable
+private fun HeartRateRow(heartRate: String, dateTime: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = heartRate)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = dateTime)
     }
 }
 
@@ -194,10 +232,10 @@ private fun DateTimePicker(selectedDateTime: Calendar, onDateTimeSelected: (Cale
     }
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Date/Time: ${dateFormat.format(selectedDateTime.time)}")
-        Spacer(modifier = Modifier.width(8.dp))
+        Text("DateTime: ${dateFormat.format(selectedDateTime.time)}")
+        Spacer(modifier = Modifier.width(5.dp))
         Button(onClick = { showDialog = true }) {
-            Text("Select Date/Time")
+            Text("Pick Datetime")
         }
     }
 }
