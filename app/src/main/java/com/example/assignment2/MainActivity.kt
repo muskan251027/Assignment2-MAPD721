@@ -1,6 +1,10 @@
 package com.example.assignment2
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Bundle
+import android.widget.DatePicker
+import android.widget.TimePicker
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -40,11 +44,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.example.assignment2.ui.theme.Assignment2Theme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,6 +84,7 @@ fun HealthConnect(modifier: Modifier = Modifier) {
     val dateAndTime = remember {
         mutableStateOf(TextFieldValue(""))
     }
+    val selectedDateTime = remember { mutableStateOf(Calendar.getInstance()) }
 
     // Main Interface
     Column(
@@ -90,16 +100,18 @@ fun HealthConnect(modifier: Modifier = Modifier) {
         ) {
             TextField(
                 value = heartRate.value,
-                onValueChange = { heartRate.value = it },
+                onValueChange = {// Validate heart rate input
+                    if (it.text.matches(Regex("\\d*")) && it.text.toIntOrNull() in 1..300) {
+                        heartRate.value = it
+                    } },
                 label = { Text("Heartrate (1-300bpm)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
-            TextField(
-                value = dateAndTime.value,
-                onValueChange = { dateAndTime.value = it },
-                label = { Text("Date/Time") },
-                modifier = Modifier.fillMaxWidth()
+            DateTimePicker(
+                selectedDateTime = selectedDateTime.value,
+                onDateTimeSelected = { selectedDateTime.value = it }
             )
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -141,6 +153,52 @@ fun HealthConnect(modifier: Modifier = Modifier) {
 
         AboutSection()
 
+    }
+}
+
+@Composable
+private fun DateTimePicker(selectedDateTime: Calendar, onDateTimeSelected: (Calendar) -> Unit) {
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+    val context = LocalContext.current
+
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        val datePickerDialog = DatePickerDialog(
+            context,
+            { _, year, monthOfYear, dayOfMonth ->
+                val newDateTime = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, monthOfYear)
+                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                }
+                TimePickerDialog(
+                    context,
+                    { _, hourOfDay, minute ->
+                        newDateTime.apply {
+                            set(Calendar.HOUR_OF_DAY, hourOfDay)
+                            set(Calendar.MINUTE, minute)
+                        }
+                        onDateTimeSelected(newDateTime)
+                    },
+                    selectedDateTime.get(Calendar.HOUR_OF_DAY),
+                    selectedDateTime.get(Calendar.MINUTE),
+                    false
+                ).show()
+            },
+            selectedDateTime.get(Calendar.YEAR),
+            selectedDateTime.get(Calendar.MONTH),
+            selectedDateTime.get(Calendar.DAY_OF_MONTH)
+        )
+        datePickerDialog.show()
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Date/Time: ${dateFormat.format(selectedDateTime.time)}")
+        Spacer(modifier = Modifier.width(8.dp))
+        Button(onClick = { showDialog = true }) {
+            Text("Select Date/Time")
+        }
     }
 }
 
